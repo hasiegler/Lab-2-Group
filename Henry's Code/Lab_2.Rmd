@@ -1,0 +1,313 @@
+---
+title: 'Lab 2: Advanced Data Visualization'
+author: "Henry Siegler"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(here)
+library(leaflet)
+library(rgdal)
+library(htmltools)
+library(simplevis)
+```
+
+
+# Part One: Identifying Bad Visualizations
+
+## Disseting a Bad Visualization
+
+__1__
+
+The graph is showing us the percentage of people who believe that vaccines are safe for many different countries across the world. The countries are grouped into different major regions of the world, and each of these regions has a line that indicates the country that is the region's median. I think the authors of the graph meant to demonstrate how people of different regions of the world compare in how they feel about vaccines in general. I think they also meant to convey how individual countries compare to other countries in their region for this statistic.
+
+__2__
+
+The variables that appear to be displayed in the visualization are the percent of people who believe vaccines are safe, country, and global region. 
+
+__3__
+
+The aesthetic for the x axis is the percent of people who believe that vaccines are safe, the y axis aesthetic is global region, and there is a label aesthetic for country name.
+
+__4__
+
+I would call this graph a modified box plot because the points are only distributed for the x axis, which is a numeric variable. I would say it is modified because instead of showing the IQR and minimum and maximum values, it only shows the median value of the region and each individual country's value.
+
+
+__5__
+
+The main problem with the graph is that the points seem to be graphed to a y axis value as well because the point increase in the y axis value as the percent of people who believe vaccines are safe increases. The y axis value does not represent anything, and it only makes the graph confusing to interpret. I would completely remove this increase in the y axis altogether. I would remove the legend at the bottom of the graph because the region name is displayed next to each region. Also, the graph only shows the country name for the countries that are close to the minimum or maximum value for the region, and they are sometimes very close together. I would remove these country labels because it makes the graph harder for the reader to analyze.
+
+## Improving a Bad Visualization
+
+```{r}
+survey <- read_excel(here("Henry's Code",
+"wgm2018-dataset-crosstabs-all-countries.xlsx"),
+                   sheet = "Full dataset")
+```
+
+```{r}
+vaccines_data <- survey %>% 
+  filter(Q25 != 99) %>% 
+  select(WP5, Regions_Report, Q25) %>% 
+  mutate(safe = case_when(Q25 == 1 |
+                          Q25 == 2 ~ 1,
+                          TRUE ~ 0),
+         region = case_when(Regions_Report == 10 | 
+                            Regions_Report == 11 | 
+                            Regions_Report == 12 |
+                            Regions_Report == 18 ~ "Asia",
+                            
+                            Regions_Report == 3 | 
+                            Regions_Report == 13 ~ "Middle East and North Africa",
+                            
+                            Regions_Report == 1 | 
+                            Regions_Report == 2 | 
+                            Regions_Report == 4 | 
+                            Regions_Report == 5 ~ "Sub-Saharan Africa",
+                            
+                            Regions_Report == 6 |
+                            Regions_Report == 7 | 
+                            Regions_Report == 8 ~ "Americas",
+                            
+                            Regions_Report == 15 | 
+                            Regions_Report == 16 | 
+                            Regions_Report == 17 |
+                            Regions_Report == 0 ~ "Europe",
+                            
+                            Regions_Report == 9 |
+                            Regions_Report == 14 ~ "Former Soviet Union"
+                            ))
+
+vaccines_data <- vaccines_data %>% 
+  group_by(WP5, region) %>% 
+  summarise(pct = mean(safe) * 100)
+```
+
+```{r}
+codes <- read_csv(here("Henry's Code", "Codes.csv"))
+
+codes <- codes %>% 
+  separate(Entry, c("WP5", "country_name"), "=") %>% 
+  mutate(WP5 = as.numeric(WP5))
+
+vaccines_data <- vaccines_data %>% 
+  left_join(codes, by = "WP5") %>% 
+  mutate(region = as.factor(region))
+```
+
+```{r}
+vaccines_data %>% 
+  ggplot(aes(x = pct, y = reorder(region, pct, median))) + 
+  geom_boxplot() + 
+  geom_jitter(aes(color = region)) +
+  theme_classic() + 
+  scale_color_discrete() + 
+  scale_x_continuous(breaks = seq(30, 100, by = 10)) +
+  ggtitle("Percent of People who Believe Vaccines are Safe") + 
+  labs(subtitle = "Points represent individual countries") +
+  theme(legend.position = "none",
+        axis.title = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.subtitle = element_text(hjust = -0.4),
+        plot.title = element_text(hjust = -1.1))
+
+```
+
+# Part Two: Broad Visualization Improvement
+
+## Second Data Visualization Improvement
+
+__1__ 
+
+One data visualization in the report I think could be improved is the visualization on page 27 titled, "Map of Perceived knowledge about science by country". The graph is a choropleth map showing the percentage of people in each country who responded in the survey that they knew "a lot" or "some" about science. I think the authors meant to show how the percentages of respondents who perceive that they have at least some knowledge of science differs by country and how there are differences between continents.
+
+
+__2__
+
+The variables in the visualization are country and the percentage of the people who answered "a lot" or "some" to the survey question.
+
+__3__
+
+The aesthetic
+
+__4__
+
+I would call this graph a choropleth.
+
+__5__
+
+The problems with this graph are that the countries are very small and it is hard to see the general darkness of each country. Also, all the countries are filled in some shade of green, which makes it hard to distinguish differences in percentages for various countries. Also, the countries not surveyed look the same color as countries that reported a low percentage of the question.
+
+```{r}
+science_data <- survey %>% 
+  select(WP5, Q1) %>% 
+  mutate(yes = case_when(Q1 == 1 | 
+                         Q1 == 2 ~ 1,
+                         TRUE ~ 0))
+
+science_data<- science_data %>% 
+  group_by(WP5) %>% 
+  summarise(pct = mean(yes) * 100)
+
+science_data <- science_data %>% 
+  left_join(codes, by = "WP5")
+
+science_data <- science_data %>% 
+  rename(NAME = country_name)
+```
+
+
+```{r}
+countries <- readOGR(dsn = here("Henry's Code", 
+                                "TM_WORLD_BORDERS_SIMPL-0.3",
+                                "TM_WORLD_BORDERS_SIMPL-0.3.shp"))
+
+
+
+world_countries <- subset(countries, 
+                          countries$NAME %in% science_data$NAME)
+
+science_data <- subset(science_data, 
+                       science_data$NAME %in% world_countries$NAME)
+
+science_data <- science_data[order(science_data$NAME),]
+
+world_countries <- world_countries[order(world_countries$NAME),]
+```
+
+
+```{r}
+bins <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+
+pal <- colorBin("YlOrRd", domain = science_data$pct, bins = bins)
+
+labels <- paste("<p>", science_data$NAME, "<p>",
+                "<p>", "%:", round(science_data$pct, digits = 2), "<p>",
+                sep = "")
+
+leaflet(world_countries) %>% 
+  addTiles() %>% 
+  addPolygons(weight = 1,
+              smoothFactor = 0.5,
+              color = "white",
+              fillOpacity = 0.8,
+              fillColor = pal(science_data$pct),
+              highlightOptions = highlightOptions(color = "gray",
+                                                  weight = 2,
+                                                  bringToFront = TRUE),
+              label = lapply(labels, HTML)) %>% 
+              addLegend(pal = pal, 
+                        values = science_data$pct,
+                        opacity = 0.7,
+                        position = "bottomleft")
+
+```
+
+
+## Third Data Visualization Improvement
+
+__1__
+
+Another visualization in the report that could be improved is the graph on page 41 titled, "Differences in perceived knowledge of science between men and women by region". For each of the world regions, the graph shows the difference in the percentage of men and women who answered that they know "a lot" or "some" about science. I think the authors meant to convey mostly that men are significantly more likely to answer that they have some knowledge about science compared to women across all the regions.
+
+__2__
+
+The variables displayed in the graph are the differences in percentages between men and women and the world region.
+
+__3__
+
+The x aesthetic in the graph is the percentage difference and the y aesthetic is the world region.
+
+__4__
+
+I would call this graph a bar chart.
+
+__5__
+
+First, because the purpose of the graph is to show the that men are more likely than women to say they know "some" or "a lot" about science, I would condense the number of regions down because there are so many of them that it makes it difficult for the reader to look at everything. Also, instead of including the differences in genders, I would include the percentages for men and women for each region, which is easier for the reader to understand.
+
+```{r}
+gender_science <- survey %>% 
+  select(Q1, Regions_Report, Gender) %>% 
+  mutate(yes = case_when(Q1 == 1 | 
+                         Q1 == 2 ~ 1,
+                         TRUE ~ 0),
+         region = case_when(Regions_Report == 10 | 
+                            Regions_Report == 11 | 
+                            Regions_Report == 12 |
+                            Regions_Report == 18 ~ "Asia",
+                            
+                            Regions_Report == 3 | 
+                            Regions_Report == 13 ~ "Middle East and North Africa",
+                            
+                            Regions_Report == 1 | 
+                            Regions_Report == 2 | 
+                            Regions_Report == 4 | 
+                            Regions_Report == 5 ~ "Sub-Saharan Africa",
+                            
+                            Regions_Report == 6 |
+                            Regions_Report == 7 | 
+                            Regions_Report == 8 ~ "Americas",
+                            
+                            Regions_Report == 15 | 
+                            Regions_Report == 16 | 
+                            Regions_Report == 17 |
+                            Regions_Report == 0 ~ "Europe",
+                            
+                            Regions_Report == 9 |
+                            Regions_Report == 14 ~ "Former Soviet Union"
+                            ))
+
+gender_science <- gender_science %>% 
+  group_by(Gender, region) %>% 
+  summarize(pct = mean(yes) * 100)
+
+gender_world <- survey %>% 
+  select(Q1, Gender) %>% 
+  mutate(yes = case_when(Q1 == 1 | 
+                         Q1 == 2 ~ 1,
+                         TRUE ~ 0)) %>% 
+  group_by(Gender) %>% 
+  summarize(pct = mean(yes) * 100) %>% 
+  mutate(region = "World",
+         Gender = case_when(Gender == 1 ~ "Male",
+                            Gender == 2 ~ "Female"))
+
+gender_science <- gender_science %>% 
+  mutate(Gender = case_when(Gender == 1 ~ "Male",
+                            Gender == 2 ~ "Female"))
+
+gender_science <- gender_science %>% 
+  bind_rows(gender_world)
+```
+
+```{r}
+gender_science %>% 
+  gg_hbar_col(x_var = pct,
+              y_var = region,
+              col_var = Gender,
+              pal = c("cornflowerblue", "coral2"),
+              title = "Percent of People who have Perceived Knowledge of Science",
+              subtitle = "How much do you, personally, know about science?",
+              x_title = "Percentage answering 'a lot' or 'some'",
+              y_title = "") + 
+  theme(plot.title = element_text(hjust = 1.8),
+        plot.subtitle = element_text(hjust = -5))
+```
+
+
+
+
+
+
+
