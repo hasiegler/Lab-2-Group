@@ -171,11 +171,13 @@ merge(world, health_data)
 
 ```{r}
 # define colors
-qpal <- colorQuantile(rev(viridis::viridis(10)),
-                      worldmap$percent_trust, n=10)
+pal <- colorQuantile(rev(viridis::mako(5)),
+                      worldmap$percent_trust, n=5)
 
-leaf_map <- leaflet(worldmap, options =
-               leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>%
+#leaflet map
+leaflet(worldmap, options =
+               leafletOptions(attributionControl = FALSE)) %>%
+  setView(lat = 20, lng = 0, zoom = 1) %>%
   addPolygons(
     label=~stringr::str_c(
       NAME, ' ',
@@ -188,11 +190,9 @@ leaf_map <- leaflet(worldmap, options =
       bringToFront = TRUE, sendToBack = TRUE)
     ) %>%
   addLegend(
-    "topright", pal = qpal, values = ~percent_trust,
+    "topright", pal = pal, values = ~percent_trust,
     title = htmltools::HTML("Trust in Health Care Clinics"),
-    opacity = 1 )
-# display visualization
-leaf_map
+    opacity = .8 )
 ```
 
 __3__
