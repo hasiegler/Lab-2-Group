@@ -175,6 +175,7 @@ pal <- colorQuantile(rev(viridis::mako(5)),
                       worldmap$percent_trust, n=5)
 
 #leaflet map
+
 leaflet(worldmap, options =
                leafletOptions(attributionControl = FALSE)) %>%
   setView(lat = 20, lng = 0, zoom = 1) %>%
@@ -184,7 +185,7 @@ leaflet(worldmap, options =
       formatC(percent_trust, big.mark = ',', format='d')),
     labelOptions= labelOptions(direction = 'auto'),
     weight=1, color='#333333', opacity=1,
-    fillColor = ~qpal(percent_trust), fillOpacity = 1,
+    fillColor = ~pal(percent_trust), fillOpacity = 1,
     highlightOptions = highlightOptions(
       color='#000000', weight = 2,
       bringToFront = TRUE, sendToBack = TRUE)
