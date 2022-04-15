@@ -1,0 +1,100 @@
+---
+title: "Lab 2 Group"
+author: "Henry Siegler"
+date: '2022-04-15'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(here)
+library(leaflet)
+library(rgdal)
+library(htmltools)
+library(simplevis)
+```
+
+# Part One: Identifying Bad Visualizations
+
+## Disseting a Bad Visualization
+
+__1__
+
+The graph is showing us the percentage of people who believe that vaccines are safe for many different countries across the world. The countries are grouped into different major regions of the world, and each of these regions has a line that indicates the country that is the region's median. I think the authors of the graph meant to demonstrate how people of different regions of the world compare in how they feel about vaccines in general. I think they also meant to convey how individual countries compare to other countries in their region for this statistic.
+
+__2__
+
+The variables that appear to be displayed in the visualization are the percent of people who believe vaccines are safe, country, and global region. 
+
+__3__
+
+The aesthetic for the x axis is the percent of people who believe that vaccines are safe, the y axis aesthetic is global region, and there is a label aesthetic for country name.
+
+__4__
+
+I would call this graph a modified box plot because the points are only distributed for the x axis, which is a numeric variable. I would say it is modified because instead of showing the IQR and minimum and maximum values, it only shows the median value of the region and each individual country's value.
+
+
+__5__
+
+The main problem with the graph is that the points seem to be graphed to a y axis value as well because the point increase in the y axis value as the percent of people who believe vaccines are safe increases. The y axis value does not represent anything, and it only makes the graph confusing to interpret. I would completely remove this increase in the y axis altogether. I would remove the legend at the bottom of the graph because the region name is displayed next to each region. Also, the graph only shows the country name for the countries that are close to the minimum or maximum value for the region, and they are sometimes very close together. I would remove these country labels because it makes the graph harder for the reader to analyze.
+
+## Improving a Bad Visualization
+
+```{r}
+survey <- read_excel(here::here("wgm2018-dataset-crosstabs-all-countries.xlsx"), 
+                     sheet = "Full dataset")
+```
+
+```{r}
+vaccines_data <- survey %>% 
+  filter(Q25 != 99) %>% 
+  select(WP5, Regions_Report, Q25) %>% 
+  mutate(safe = case_when(Q25 %in% 1:2 ~ 1,
+                          TRUE ~ 0),
+         region = case_when(Regions_Report %in% c(10, 11, 12, 18) ~ "Asia",
+                            
+                            Regions_Report %in% c(3, 13) ~ "Middle East and North Africa",
+                            
+                            Regions_Report %in% c(1, 2, 4, 5) ~ "Sub-Saharan Africa",
+                            
+                            Regions_Report %in% 6:8 ~ "Americas",
+                            
+                            Regions_Report %in% c(15, 16, 17 , 0) ~ "Europe",
+                            
+                            Regions_Report %in% c(9, 14) ~ "Former Soviet Union"
+                            ))
+
+vaccines_data <- vaccines_data %>% 
+  group_by(WP5, region) %>% 
+  summarise(pct = mean(safe) * 100) %>% 
+  mutate(region = as.factor(region))
+```
+
+```{r}
+vaccines_data %>% 
+  ggplot(aes(x = pct, y = reorder(region, pct, median))) + 
+  geom_boxplot() + 
+  geom_jitter(aes(color = region)) +
+  theme_classic() + 
+  scale_color_discrete() + 
+  scale_x_continuous(breaks = seq(30, 100, by = 10)) +
+  ggtitle("Percent of People who Believe Vaccines are Safe") + 
+  labs(subtitle = "Points represent individual countries") +
+  theme(legend.position = "none",
+        axis.title = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.subtitle = element_text(hjust = -0.4),
+        plot.title = element_text(hjust = -1.1))
+
+```
+
+
