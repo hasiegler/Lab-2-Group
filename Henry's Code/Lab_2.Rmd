@@ -35,7 +35,7 @@ The variables that appear to be displayed in the visualization are the percent o
 
 __3__
 
-The aesthetic for the x axis is the percent of people who believe that vaccines are safe, the y axis aesthetic is global region, and there is a label aesthetic for country name.
+The aesthetic for the x axis is the percent of people who believe that vaccines are safe, the y axis aesthetic is global region, and there is a label aesthetic for country name. There is also a color aesthetic on global region which makes the points different colors, and there is a line type aesthetic for dotted lines at each 10 percent from 30 to 100.
 
 __4__
 
