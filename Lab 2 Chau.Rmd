@@ -47,6 +47,7 @@ I would change the type of visualization. The one that is used is confusing. I w
 
 
 ```{r, warning==FALSE}
+#clean data
 vax_data <- country_data %>% 
   group_by(WP5, Regions_Report) %>% 
   filter(Q25 != 98:99) %>% 
@@ -55,10 +56,12 @@ vax_data <- country_data %>%
                         Q25 %in%  3:5 ~ 0)) %>% 
   drop_na()
 
+#calculate %
 vax_data <- vax_data %>%
   group_by(WP5, Regions_Report) %>% 
   summarize(percent_safe = mean(Q25))
 
+#create regions
 vax_data <- vax_data %>% 
     mutate(region = case_when(Regions_Report %in% c(10:12, 18) ~ 'Asia',
                                    Regions_Report %in% c(3, 13) ~ 'Middle East and North Africa',
@@ -70,6 +73,7 @@ vax_data <- vax_data %>%
 ```
 
 ```{r}
+#violin plot
  vax_data %>% 
   ggplot(mapping = aes(x = percent_safe, y = region, fill = region)) +
   geom_violin(position = "fill") +  
@@ -209,6 +213,7 @@ This is a bar plot.
 It is a confusing plot to understand. I have no idea how perceived impact is measured just by looking at the plot. That should have been made clear. The colors are also not that nice looking.
 
 ```{r, warning=FALSE}
+#clean data
 tech_data <- country_data %>% 
   group_by(WP5, Regions_Report) %>% 
   filter(Q19 != 98:99) %>% 
@@ -216,11 +221,12 @@ tech_data <- country_data %>%
   mutate(Q19 = case_when(Q19 %in% 1:2 ~ 1,
                         Q19 %in%  3:5 ~ 0)) %>% 
   drop_na()
-
+#calculate %
 tech_data <- tech_data %>% 
   group_by(WP5, Regions_Report) %>% 
   summarise(percent_job = mean(Q19) * 100)
 
+#create regions
 tech_data <- tech_data %>% 
     mutate(region = case_when(Regions_Report %in% c(10:12, 18) ~ 'Asia',
                                    Regions_Report %in% c(3, 13) ~ 'Middle East and North Africa',
@@ -232,6 +238,7 @@ tech_data <- tech_data %>%
 ```
  
 ```{r}
+#ridges plot
 library(ggridges)
 tech_data %>% 
   ggplot(mapping = aes(x = percent_job, y = region, fill = region)) + 
