@@ -1,0 +1,216 @@
+---
+title: "Lab 2"
+author: "Beatrice Weier"
+date: '2022-04-07'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages('leaflet')
+#install.packages('sp')
+library(leaflet)
+library(tidyverse)
+library(sp)
+library(readxl)
+library(magrittr)
+library(ggplot2)
+library(gganimate)
+library(gifski)
+library(rgdal)
+```
+
+## Part 1: Identifying Bad Visualization
+
+1. While there are certainly issues with this image, do your best to tell the story of this graph in words. That is, what is this graph telling you? What do you think the authors meant to convey with it?
+
+* I believe that this graph is meant to show the percent of people who believe safety from vaccines in different countries seperated by region. 
+
+
+2. List the variables that appear to be displayed in this visualization.
+
+* Percent of people
+* Region
+* Country
+* Median
+
+
+3. List the variables that appear to be displayed in this visualization.
+
+* color: region
+* x: percent 
+* x(seperate geom aes): median by region
+
+
+4. What type of graph would you call this?
+
+* It appears as a scatterplot but no y axis is specified
+
+
+5. List all of the problems or things you would improve about this graph.
+
+* I would have the countries per region on the same horizontal axis (probably with jitter)
+* Label the y axis
+
+### Improving the Bad Visualization
+
+```{r}
+fullcountries<-read_excel("wgm2018-dataset-crosstabs-all-countries.xlsx",sheet="Full dataset")
+def<-read_excel("wgm2018-dataset-crosstabs-all-countries.xlsx",sheet="Data dictionary")
+
+
+#giving names to the numbers
+fullcountries$name<-factor(fullcountries$WP5,levels = unique(fullcountries$WP5),
+                       labels = c('United States', 'Egypt', 'Morocco', 'Lebanon', 'Saudi Arabia', 'Jordan', 'Turkey', 'Pakistan', 'Indonesia', 'Bangladesh', 'United Kingdom', 'France', 'Germany', 'Netherlands', 'Belgium', 'Spain', 'Italy', 'Poland', 'Hungary', 'Czech Republic', 'Romania', 'Sweden', 'Greece', 'Denmark', 'Iran', 'Singapore', 'Japan', 'China', 'India', 'Venezuela', 'Brazil', 'Mexico', 'Nigeria', 'Kenya', 'Tanzania', 'Israel', 'Palestinian Territories', 'Ghana', 'Uganda', 'Benin', 'Madagascar', 'Malawi', 'South Africa', 'Canada', 'Australia', 'Philippines', 'Sri Lanka', 'Vietnam', 'Thailand', 'Cambodia', 'Laos', 'Myanmar', 'New Zealand', 'Botswana', 'Ethiopia', 'Mali', 'Mauritania', 'Mozambique', 'Niger', 'Rwanda', 'Senegal', 'Zambia', 'South Korea', 'Taiwan', 'Afghanistan', 'Belarus', 'Georgia', 'Kazakhstan', 'Kyrgyzstan', 'Moldova', 'Russia', 'Ukraine', 'Burkina Faso', 'Cameroon', 'Sierra Leone', 'Zimbabwe', 'Costa Rica', 'Albania', 'Algeria', 'Argentina', 'Armenia', 'Austria', 'Azerbaijan', 'Bolivia', 'Bosnia and Herzegovina', 'Bulgaria', 'Burundi', 'Chad', 'Chile', 'Colombia', 'Comoros', 'Republic of Congo', 'Croatia', 'Cyprus', 'Dominican Republic', 'Ecuador', 'El Salvador', 'Estonia', 'Finland', 'Gabon', 'Guatemala', 'Guinea', 'Haiti', 'Honduras', 'Iceland', 'Iraq', 'Ireland', 'Ivory Coast', 'Kuwait', 'Latvia', 'Liberia', 'Libya', 'Lithuania', 'Luxembourg', 'Macedonia', 'Malaysia', 'Malta', 'Mauritius', 'Mongolia', 'Montenegro', 'Namibia', 'Nepal', 'Nicaragua', 'Norway', 'Panama', 'Paraguay', 'Peru', 'Portugal', 'Serbia', 'Slovakia', 'Slovenia', 'Eswatini', 'Switzerland', 'Tajikistan', 'The Gambia', 'Togo', 'Tunisia', 'Turkmenistan', 'United Arab Emirates', 'Uruguay', 'Uzbekistan', 'Yemen', 'Kosovo', 'Northern Cyprus'))
+
+fullcountries$region<-factor(fullcountries$Regions_Report, 
+                         levels=sort(as.numeric(unique(fullcountries$Regions_Report))), #order correctly w def
+                         label=c('Not assigned', 'Sub-Saharan Africa', 'Sub-Saharan Africa', 'Middle East and North Africa', 'Sub-Saharan Africa', 'Sub-Saharan Africa', 'Americas', 'Americas', 'Americas', 'Former Soviet Union','Asia', 'Asia', 'Asia','Middle East and North Africa','Former Soviet Union' , 'Europe', 'Europe', 'Europe','Asia'))
+
+#fix up the scaling of the question variable
+countries<-fullcountries%>%select(c("name","Q25","region")) #should only need these data set.
+countries$percent<-ifelse(countries$Q25==1, yes= 100,
+                              ifelse(countries$Q25==2, yes = 100,
+                              ifelse(countries$Q25==3, yes = 0, 
+                              ifelse(countries$Q25==4, yes = 0,
+                              ifelse(countries$Q25==5, yes = 0 , no=NA)))))
+```
+
+Now we have cleared up what means what and can group the data by country
+```{r,message=F}
+sumcountries<-distinct(
+  countries%>%group_by(name)%>%
+    summarize(mean(percent, na.rm=T),region))
+    
+names(sumcountries)[2]<-'cmean'#just to make the name easier to use
+sumcountries<-sumcountries[sumcountries$region!='Not assigned',] #removing not assigned
+
+regionmed<-sumcountries%>%
+  group_by(region)%>%
+  summarize(median(cmean)) #another data set with median
+
+
+```
+sumcountries is a shorter data frame with only summarized data of each country.
+add animation
+
+```{r}
+ggplot()+
+  geom_jitter(data=sumcountries,aes(x=cmean,y = region, color=region),height=.1)+
+  geom_point(data=regionmed,aes(x=`median(cmean)`,y=region),pch='|',size=12)+
+  labs(x="Mean Percent (%)", y = "", color="Region",
+       title="% of people who believe vaccines are safe,\n by country and global region",
+       subtitle = "Dark verticle lines represent region medians")+
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.major.x = element_line(color="gray"),
+    panel.grid.minor.x = element_line(color="gray"),
+    axis.line = element_line(),
+    panel.background=element_blank()
+  )
+```
+
+## Second Data Visualization Improvement
+Looking at the "Net difference in belief that vaccines are safe between those with and without tertiary education.
+
+```{r, messages = F}
+eduDF<-na.omit(fullcountries%>%select(c("name","Q25","region","Education")))
+eduDF$tertiary<-ifelse(eduDF$Education==3,yes='with',no='without')
+eduDF$percent<-ifelse(eduDF$Q25==1, yes= 100,
+                              ifelse(countries$Q25==2, yes = 100,
+                              ifelse(countries$Q25==3, yes = 0, 
+                              ifelse(countries$Q25==4, yes = 0,
+                              ifelse(countries$Q25==5, yes = 0 , no=NA)))))
+
+#now finding the difference per country
+tertBYcountry<-na.omit(eduDF)%>%group_by(name,tertiary)%>%summarize(mean(percent))
+
+#changing to wider format so difference can be found by country
+tertBYcountry%<>%pivot_wider(names_from = tertiary , 
+                                        values_from = `mean(percent)`)%>%mutate(diff=with-without)
+
+tertBYcountry<-data.frame(tertBYcountry)
+
+```
+Now we have the differences by country and we can make a graph on a map.
+
+code from: https://r-graph-gallery.com/183-choropleth-map-with-leaflet.html
+```{r}
+#read in polygon data
+world_spdf <- readOGR( 
+  dsn= getwd(), 
+  layer="TM_WORLD_BORDERS_SIMPL-0.3",
+  verbose=FALSE)
+
+#new vector with differences as listed in order of the shape data
+vacdiff<-ifelse(world_spdf@data$NAME%in%tertBYcountry$name,
+       yes=tertBYcountry$diff,no=NA)
+
+
+```
+
+```{r}
+
+#creating a color palette, can still be done with the old df
+colorp<-colorNumeric(palette="magma",domain = vacdiff, na.color="transparent")
+colorp(c(-3,3)) #checkings if there are colors
+  
+text<- paste(
+  "Country: ", world_spdf@data$NAME,"<br/>",
+  "Difference: ", round(vacdiff,2),
+  sep="")%>%
+  lapply(htmltools::HTML)
+
+leaflet(world_spdf)%>%
+  addTiles()%>%
+  setView(lat = 20, lng = 0, zoom = 1.5)%>%
+  addPolygons(fillColor = ~colorp(vacdiff), 
+              stroke = T, 
+              color="white", 
+              weight=0.3,
+              fillOpacity = .9,
+              label=text)%>%
+  addLegend(pal=colorp, values=vacdiff, 
+            position = "bottomleft", 
+            title= "Net Difference")
+```
+
+## Third Data Visualization Improvement
+for the last one I will be looking at the graph "Share of People who agree or disagree that vaccines are safe, by highest level of education attained (%)"
+```{r}
+#only China, Costa Rica, Iran, Mongolia, Paraguay, and Russia were used in the graph, so we filter those countries
+vaccbyEDU<-fullcountries%>%select(name, Education, Q25)%>%filter(name %in% c("China","Costa   Rica","Iran","Mongolia","Paraguay","Russia"))
+
+#finding the proportions that agree, disagree, unsure
+#in this step, the NA are also removed
+vaccbyEDU<-distinct(na.omit(vaccbyEDU)%>%group_by(name,Education)%>%
+                      mutate(Agree=sum(Q25==1|Q25==2)/length(Q25),
+                             Unsure=sum(Q25==3)/length(Q25),
+                             Disagree=sum(Q25==4|Q25==5)/length(Q25))%>%
+  select(name, Education, Agree, Unsure, Disagree))
+
+#Now change the format so it is easier to plot
+vaccbyEDU%<>%pivot_longer(cols=c(Agree,Unsure,Disagree),names_to = "view")
+#and change some as factors so the order and plot make more sense
+vaccbyEDU$view<-factor(vaccbyEDU$view, levels=c("Agree","Unsure","Disagree"))
+vaccbyEDU$Education<-factor(vaccbyEDU$Education, 
+                            levels=c(1,2,3), 
+                            labels=c("Primary", "Secondary",
+                                     "Post-Secondary"))
+```
+
+Now we have the data needed for the plots
+```{r,warning=F}
+g<-ggplot(vaccbyEDU)+
+  geom_histogram(aes(x=name,y=value,fill=view),stat="identity")+
+  transition_states(Education,
+                    transition_length=2,
+                    state_length=1)+
+  labs(title = "Share of People who agree or disagree that vaccines are safe\n with {closest_state} Education",
+       y = "Percent (%)",
+       x = "Country",
+       fill = "Are vaccines safe?")
+animate(g,nframes=60,fps=10)
+```
+
