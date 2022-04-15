@@ -138,7 +138,7 @@ The variables in the visualization are country and the percentage of the people 
 
 __3__
 
-The aesthetic
+There is not necessarily specific aesthetics for choropleths because they do not use the aes() function. Based off of the map, we could say that the color palette is an aesthetic as the map uses a gradient of greens to fill in the countries.
 
 __4__
 
@@ -226,7 +226,7 @@ The variables displayed in the graph are the differences in percentages between 
 
 __3__
 
-The x aesthetic in the graph is the percentage difference and the y aesthetic is the world region.
+The x aesthetic in the graph is the percentage difference and the y aesthetic is the world region. There is also a linetype aesthetic for dotted lines going vertically on the x-axis.
 
 __4__
 
