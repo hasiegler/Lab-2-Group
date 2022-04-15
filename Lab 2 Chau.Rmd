@@ -1,0 +1,254 @@
+---
+title: "Lab 2 part 1"
+author: "Chau Nguyen"
+date: "4/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(leaflet)
+library(rgdal)
+country_crosstab <- read_excel('wgm2018-dataset-crosstabs-all-countries.xlsx', 
+                               sheet = "Crosstabs all countries",
+                               skip = 2)
+
+country_data <- read_excel('wgm2018-dataset-crosstabs-all-countries.xlsx', 
+
+                               sheet = "Full dataset")
+
+country_diction <- read_excel('wgm2018-dataset-crosstabs-all-countries.xlsx', 
+
+                               sheet = "Data dictionary")
+```
+
+
+1. While there are certainly issues with this image, do your best to tell the story of this graph in words. That is, what is this graph telling you? What do you think the authors meant to convey with it?
+
+This graph tells a story about how trust in the safety of vaccines varies by global region.
+
+
+2. List the variables that appear to be displayed in this visualization.
+
+The variables that appear to be displayed on this visualization are region, percent of the population that believes vaccines are safe, and country name (for some countries).
+
+3. Now that you're versed in the grammar of graphics (ggplot), list the aesthetics used and which variables are specified for each.
+
+The type of plot that they used was a geometry. The line that represents a summary statistic is also a geometry. The x aesthetic is the percentage of the population who believes that vaccines are safe. Region is the y aesthetic. The countries that are labeled is also an aesthetic. 
+
+
+4. What type of graph would you call this?
+It is a weird boxplot.
+
+5. List all of the problems or things you would improve about this graph.  
+I would change the type of visualization. The one that is used is confusing. I would probably change it to a boxplot or violin plot. I would also get rid of the labels for some countries only because it is confusing and strange.
+
+
+```{r, warning==FALSE}
+#clean data
+vax_data <- country_data %>% 
+  group_by(WP5, Regions_Report) %>% 
+  filter(Q25 != 98:99) %>% 
+  select(WP5, Regions_Report, Q25) %>% 
+  mutate(Q25 = case_when(Q25 %in% 1:2 ~ 1,
+                        Q25 %in%  3:5 ~ 0)) %>% 
+  drop_na()
+
+#calculate %
+vax_data <- vax_data %>%
+  group_by(WP5, Regions_Report) %>% 
+  summarize(percent_safe = mean(Q25))
+
+#create regions
+vax_data <- vax_data %>% 
+    mutate(region = case_when(Regions_Report %in% c(10:12, 18) ~ 'Asia',
+                                   Regions_Report %in% c(3, 13) ~ 'Middle East and North Africa',
+                                   Regions_Report %in% 1:5 ~ 'Sub-Saharan Africa', 
+                                   Regions_Report %in% 6:8 ~ 'Americas', 
+                                   Regions_Report %in% c(15:17, 0) ~ 'Europe', 
+                                   Regions_Report %in% c(9, 14) ~ 'Former USSR'))
+
+```
+
+```{r}
+#violin plot
+ vax_data %>% 
+  ggplot(mapping = aes(x = percent_safe, y = region, fill = region)) +
+  geom_violin(position = "fill") +  
+  geom_boxplot(width=.1) +
+  scale_fill_manual(values = c("#df5d99", "#dea1d1", "#48aa9f", '#96d1b4', "#ee7447", "#f4a3a0")) +
+  scale_x_continuous(labels = function(x) paste0(x*100, "%")) + # Multiply by 100 & add %  
+  theme(axis.text.x = element_text(size = 5), axis.text.y = 
+        element_text(size=)) +
+  labs(y = "Region of the World", x = "% of Pop. that Trusts Vaccines") +
+  theme_classic() +
+  theme(legend.position = 'none') +
+  ggtitle("Trust in Vaccines by Region")
+  
+```
+__2__
+
+1. Select a data visualization in the report that you think could be improved. Be sure to cite both the page number and figure title. Do your best to tell the story of this graph in words. That is, what is this graph telling you? What do you think the authors meant to convey with it?
+
+The choropleth on page 65 of the report can be improved. This graph uses varying shades of the color green to represent the level of confidence that people in particular countries have in their countries' health clinics and hospitals. 
+
+2. List the variables that appear to be displayed in this visualization.
+The variables that appear to be displayed in the visualization are country and level of confidence on hospitals and health care clinics. 
+
+3. Now that you're versed in the grammar of graphics (ggplot), list the aesthetics used and which variables are specified for each.
+The fill aesthetic is the country and the percentage of confidence is also an aesthetic. The world map is a geometry.
+
+4. What type of graph would you call this?
+
+This is a choropleth.
+
+5. List all of the problems or things you would improve about this graph.  
+
+Green only is not an accessible color for red green color blind people. I would change the color to make it more accessible. I would also fix the label of the legend to make it more accurate. The legend could also be more descriptive
+
+
+6. Improve the visualization above by either re-creating it with the issues you identified fixed OR by creating a new visualization that you believe tells the same story better.
+I got the world map and leaflet base from here:
+
+```{r}
+#create a df with the names of the countries in the whack order that it came in
+dictionary_clean <- country_diction %>% 
+  select(`Variable Type & Codes*`) %>% 
+  head(n = 1) %>%  
+  pull()
+
+dictionary_clean_1 <- dictionary_clean %>% 
+  str_replace_all("[:digit:]+=", "") %>% 
+  str_split(",") %>% 
+  as.data.frame() %>% 
+  mutate(across(where(is.character), str_trim)) %>%
+  rename("countries" = "c..United.States.....Egypt.....Morocco.....Lebanon.....Saudi.Arabia...") %>% 
+  head(n = 144) # last entry was blank so I removed it
+
+```
+
+```{r, warning = FALSE}
+#clean data
+health_data <- country_data %>% 
+  group_by(WP5, Regions_Report) %>% 
+  filter(Q22 != 98:99) %>% 
+  select(WP5, Regions_Report, Q22) %>% 
+  mutate(Q22 = case_when(Q22 %in% 1:2 ~ 1,
+                        TRUE ~ 0)) %>% 
+  drop_na()
+
+#calculate %
+health_data <- health_data %>% 
+  group_by(WP5) %>% 
+  summarise(percent_trust = mean(Q22) * 100)
+
+#add country column to data set
+health_data <- add_column(health_data, dictionary_clean_1) 
+
+health_data <- health_data %>% 
+  rename("NAME" = 'countries')
+
+```
+ 
+
+The leaflet base map came from this website: https://r-graph-gallery.com/183-choropleth-map-with-leaflet.html
+
+I learned how to merge the data frame and the spacial object here
+https://gis.stackexchange.com/questions/259803/merge-spatial-and-non-spatial-data-and-create-spatialpolygonsdataframe-in-r
+
+The base code for the map came from here:
+https://slcladal.github.io/maps.html
+```{r}
+#read in spacial object
+world <- readOGR(
+  dsn = here::here("TM_WORLD_BORDERS_SIMPL-0.3", "TM_WORLD_BORDERS_SIMPL-0.3.shp"))
+
+#merge spacial object with df
+merge(world, health_data)
+```
+
+```{r}
+# define colors
+qpal <- colorQuantile(rev(viridis::viridis(10)),
+                      worldmap$percent_trust, n=10)
+
+leaf_map <- leaflet(worldmap, options =
+               leafletOptions(attributionControl = FALSE, minzoom=1.5)) %>%
+  addPolygons(
+    label=~stringr::str_c(
+      NAME, ' ',
+      formatC(percent_trust, big.mark = ',', format='d')),
+    labelOptions= labelOptions(direction = 'auto'),
+    weight=1, color='#333333', opacity=1,
+    fillColor = ~qpal(percent_trust), fillOpacity = 1,
+    highlightOptions = highlightOptions(
+      color='#000000', weight = 2,
+      bringToFront = TRUE, sendToBack = TRUE)
+    ) %>%
+  addLegend(
+    "topright", pal = qpal, values = ~percent_trust,
+    title = htmltools::HTML("Trust in Health Care Clinics"),
+    opacity = 1 )
+# display visualization
+leaf_map
+```
+
+__3__
+1. Select a data visualization in the report that you think could be improved. Be sure to cite both the page number and figure title. Do your best to tell the story of this graph in words. That is, what is this graph telling you? What do you think the authors meant to convey with it?
+
+Chart 4.12 on page 95 could be improved. This graph aims to visualize the perceived impact of technology on jobs based on the education level and socioeconomic status of countries. 
+
+
+2. List the variables that appear to be displayed in this visualization.
+The variables that appear to be displayed in this visualization are socioeconomic status of a country, a numeric measure for perceived impact that tech will have on jobs, and education status. 
+
+3. Now that you're versed in the grammar of graphics (ggplot), list the aesthetics used and which variables are specified for each.
+Education status, socioeconomic status, and the numeric measure for perceived impact are aesthetics. The bar plot is the geometry.
+
+4. What type of graph would you call this?
+This is a bar plot.
+
+5. List all of the problems or things you would improve about this graph.  
+It is a confusing plot to understand. I have no idea how perceived impact is measured just by looking at the plot. That should have been made clear. The colors are also not that nice looking.
+
+```{r, warning=FALSE}
+#clean data
+tech_data <- country_data %>% 
+  group_by(WP5, Regions_Report) %>% 
+  filter(Q19 != 98:99) %>% 
+  select(WP5, Regions_Report, Q19) %>% 
+  mutate(Q19 = case_when(Q19 %in% 1:2 ~ 1,
+                        Q19 %in%  3:5 ~ 0)) %>% 
+  drop_na()
+#calculate %
+tech_data <- tech_data %>% 
+  group_by(WP5, Regions_Report) %>% 
+  summarise(percent_job = mean(Q19) * 100)
+
+#create regions
+tech_data <- tech_data %>% 
+    mutate(region = case_when(Regions_Report %in% c(10:12, 18) ~ 'Asia',
+                                   Regions_Report %in% c(3, 13) ~ 'Middle East and North Africa',
+                                   Regions_Report %in% 1:5 ~ 'Sub-Saharan Africa', 
+                                   Regions_Report %in% 6:8 ~ 'Americas', 
+                                   Regions_Report %in% c(15:17, 0) ~ 'Europe', 
+                                   Regions_Report %in% c(9, 14) ~ 'Former USSR'))
+
+```
+ 
+```{r}
+#ridges plot
+library(ggridges)
+tech_data %>% 
+  ggplot(mapping = aes(x = percent_job, y = region, fill = region)) + 
+  geom_density_ridges() + 
+  scale_fill_manual(values = c('#a8e6cf', '#dcedc1', '#ffd3b6', '#ffaaa5', '#ff8b94', '#bdeaee'))+
+  scale_x_continuous(labels = function(x) paste0(x, "%")) + # Add percent sign 
+  labs(x = "% Who Believe Technology will Increase Jobs", y ="Global Region") +
+  theme_classic() +
+  theme(legend.position = 'none') +
+  ggtitle("Perception of the Impact on Technology on Jobs by Global Region")
+```
+
