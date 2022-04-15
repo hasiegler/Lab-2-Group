@@ -77,6 +77,7 @@ vax_data <- vax_data %>%
  vax_data %>% 
   ggplot(mapping = aes(x = percent_safe, y = region, fill = region)) +
   geom_violin(position = "fill") +  
+  geom_boxplot(width=.1) +
   scale_fill_manual(values = c("#df5d99", "#dea1d1", "#48aa9f", '#96d1b4', "#ee7447", "#f4a3a0")) +
   scale_x_continuous(labels = function(x) paste0(x*100, "%")) + # Multiply by 100 & add %  
   theme(axis.text.x = element_text(size = 5), axis.text.y = 
