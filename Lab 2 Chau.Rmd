@@ -254,9 +254,10 @@ tech_data <- country_data %>%
   group_by(WP5, Regions_Report) %>% 
   filter(Q19 != 98:99) %>% 
   select(WP5, Regions_Report, Q19) %>% 
-  mutate(Q19 = case_when(Q19 %in% 1:2 ~ 1,
-                        Q19 %in%  3:5 ~ 0)) %>% 
+  mutate(Q19 = case_when(Q19 %in% 1:2 ~ 1, 
+                         Q19 %in%  3:5 ~ 0)) %>% 
   drop_na()
+
 #calculate %
 tech_data <- tech_data %>% 
   group_by(WP5, Regions_Report) %>% 
@@ -265,11 +266,11 @@ tech_data <- tech_data %>%
 #create regions
 tech_data <- tech_data %>% 
     mutate(region = case_when(Regions_Report %in% c(10:12, 18) ~ 'Asia',
-                                   Regions_Report %in% c(3, 13) ~ 'Middle East and North Africa',
-                                   Regions_Report %in% 1:5 ~ 'Sub-Saharan Africa', 
-                                   Regions_Report %in% 6:8 ~ 'Americas', 
-                                   Regions_Report %in% c(15:17, 0) ~ 'Europe', 
-                                   Regions_Report %in% c(9, 14) ~ 'Former USSR'))
+                              Regions_Report %in% c(3, 13) ~ 'Middle East and North Africa',
+                              Regions_Report %in% 1:5 ~ 'Sub-Saharan Africa', 
+                              Regions_Report %in% 6:8 ~ 'Americas', 
+                              Regions_Report %in% c(15:17, 0) ~ 'Europe', 
+                              Regions_Report %in% c(9, 14) ~ 'Former USSR'))
 
 ```
  
