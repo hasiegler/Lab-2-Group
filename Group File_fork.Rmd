@@ -101,13 +101,13 @@ vaccines_data %>%
 
 __1__ Select a data visualization in the report that you think could be improved. Be sure to cite both the page number and figure title. Do your best to tell the story of this graph in words. That is, what is this graph telling you? What do you think the authors meant to convey with it?
 
-The choropleth on page 65 of the report can be improved. This graph uses varying shades of the color green to represent the level of confidence that people in particular countries have in their countries' health clinics and hospitals. 
+The choropleth on page 65 of the report can be improved. This graph uses varying shades of the color light green to represent the level of confidence that people in particular countries have in health clinics and hospitals in their countries. 
 
 __2__ List the variables that appear to be displayed in this visualization.
-The variables that appear to be displayed in the visualization are country and level of confidence on hospitals and health care clinics. 
+The variables that appear to be displayed in the visualization are country and level of confidence in hospitals and health care clinics. 
 
 __3__ Now that you're versed in the grammar of graphics (ggplot), list the aesthetics used and which variables are specified for each.
-The fill aesthetic is the country and the percentage of confidence is also an aesthetic. The world map is a geometry.
+The color of the countries is an aesthetic. The x aesthetic is the percent. The world map is a geometry.
 
 __4__ What type of graph would you call this?
 
@@ -115,10 +115,12 @@ This is a choropleth.
 
 __5__ List all of the problems or things you would improve about this graph.  
 
-Green only is not an accessible color for red green color blind people. I would change the color to make it more accessible. I would also fix the label of the legend to make it more accurate. The legend could also be more descriptive
+Green only is not an accessible color for red green color blind people. This is particularly true for this graph because it is just uses slighly different shades of light green. I would change the colors of the choropleth to make it more accessible. I would also fix the label of the legend to make it more descriptive and accurate. 
 
 
 __6__ Improve the visualization above by either re-creating it with the issues you identified fixed OR by creating a new visualization that you believe tells the same story better.
+
+## Improving the Bad Visualization
 
 ```{r}
 country_diction <- read_excel('wgm2018-dataset-crosstabs-all-countries.xlsx',
@@ -219,57 +221,60 @@ __1__ Select a data visualization in the report that you think could be improved
 Chart 4.12 on page 95 could be improved. This graph aims to visualize the perceived impact of technology on jobs based on the education level and socioeconomic status of countries. 
 
 __2__ List the variables that appear to be displayed in this visualization.
-The variables that appear to be displayed in this visualization are socioeconomic status of a country, a numeric measure for perceived impact that tech will have on jobs, and education status. 
+The variables that appear to be displayed in this visualization are socioeconomic status of a country, perceived net impact that technology will have on jobs, and education status. 
 
 __3__ Now that you're versed in the grammar of graphics (ggplot), list the aesthetics used and which variables are specified for each.
-Education status, socioeconomic status, and the numeric measure for perceived impact are aesthetics. The bar plot is the geometry.
+Education status is the fill aesthetic. Income level is the x aesthetic. The net impact score is the y aesthetic. The bar plot is the geometry. There is also a numeric label on top of all the bars (and under the upside down one); this is the label aesthetic.
 
 _4__ What type of graph would you call this?
-This is a bar plot.
+This is a bar plot that has one upside down bar.
 
 __5__ List all of the problems or things you would improve about this graph.  
-It is a confusing plot to understand. I have no idea how perceived impact is measured just by looking at the plot. That should have been made clear. The colors are also not that nice looking.
-
+It is a confusing plot to understand. I have no idea how perceived net impact is measured just by looking at the plot. I have no idea what perceived net impact means either. It is a pretty confusing measure to try to understand just by viewing the plot. That should have been made clear. I feel like there should be more income groupings for countries as well because in the full dataset, countries are group in terms of being either high income, middle high income, middle low income, or low income. I think that a middle income grouping should be included. The colors are also not very nice looking.
 
 ```{r, warning=FALSE}
 #clean data
 tech_data <- survey %>% 
-  group_by(WP5, Regions_Report) %>% 
-  filter(Q19 != 98:99) %>% 
+  group_by(WP5, WBI, Education) %>% 
   select(WP5, Regions_Report, Q19) %>% 
   mutate(Q19 = case_when(Q19 == 1 ~ 1, 
                          Q19 %in%  2:3 ~ 0)) %>% 
   drop_na()
-
 #calculate %
 tech_data <- tech_data %>% 
-  group_by(WP5, Regions_Report) %>% 
-  summarise(percent_job = mean(Q19) * 100)
-
-#create regions
+  group_by(WP5, WBI, Education,) %>% 
+  summarise(percent_job = mean(Q19) * 100, .groups = "keep")
+#create groupings
 tech_data <- tech_data %>% 
-    mutate(region = case_when(Regions_Report %in% c(10:12, 18) ~ 'Asia',
-                              Regions_Report %in% c(3, 13) ~ 'Middle East and North Africa',
-                              Regions_Report %in% 1:5 ~ 'Sub-Saharan Africa', 
-                              Regions_Report %in% 6:8 ~ 'Americas', 
-                              Regions_Report %in% c(15:17, 0) ~ 'Europe', 
-                              Regions_Report %in% c(9, 14) ~ 'Former USSR'))
+    mutate(
+         income_level = case_when(WBI == 1 ~ "Low Income", 
+                                  WBI %in% 2:3 ~ "Middle Income",
+                                  WBI == 4 ~ "High Income"), 
+         Education = case_when(Education == 1 ~ "Primary", 
+                               Education == 2 ~ "Secondary", 
+                              Education == 3 ~ "Post-secondary"))
 
+#make income & education levels factors
+tech_data <- tech_data %>%   
+         mutate(income_level = factor(income_level, c("Low Income", "Middle Income", "High Income")), 
+                Education = factor(Education, c("Primary", "Secondary", "Post-secondary")))
+  
 ```
 
 ```{r}
 #ridges plot
 library(ggridges)
-
 tech_data %>% 
-  ggplot(mapping = aes(x = percent_job, y = region, fill = region)) + 
+  ggplot(mapping = aes(x = percent_job, y = income_level, fill = income_level)) + 
   geom_density_ridges() + 
+  facet_wrap(~Education)+
   scale_fill_manual(values = c('#a8e6cf', '#dcedc1', '#ffd3b6', '#ffaaa5', '#ff8b94', '#bdeaee'))+
   scale_x_continuous(labels = function(x) paste0(x, "%")) + # Add percent sign 
-  labs(x = "% of Country that Believes Technology will Increase Local Jobs",
-       subtitle = "By Global Region") +
+  labs(x = "Percent that Believes Technology will Increase Local Jobs", y = "Income Level of 
+       Country",
+       subtitle = "Based on the Country's Income Level and Education Level") +
   theme_classic() +
   theme(legend.position = 'none',
         axis.title.y = element_blank()) +
-  ggtitle("Percent of Respondents in each Country that \nBelieve Technology will Increase Jobs")
+  ggtitle("Percent of Respondents that \nBelieve Technology will Increase Jobs ")
 ```
