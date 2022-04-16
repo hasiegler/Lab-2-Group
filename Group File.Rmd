@@ -264,8 +264,7 @@ tech_data %>%
   facet_wrap(~Education)+
   scale_fill_manual(values = c('#a8e6cf', '#dcedc1', '#ffd3b6', '#ffaaa5', '#ff8b94', '#bdeaee'))+
   scale_x_continuous(labels = function(x) paste0(x, "%")) + # Add percent sign 
-  labs(x = "Percent that Believes Technology will Increase Local Jobs", y = "Income Level of 
-       Country",
+  labs(x = "Percent that Believes Technology will Increase Local Jobs",
        subtitle = "Based on the Country's Income Level and Education Level") +
   theme_classic() +
   theme(legend.position = 'none',
