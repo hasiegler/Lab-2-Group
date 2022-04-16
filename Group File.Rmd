@@ -183,14 +183,11 @@ worldmap <- merge(world, trust_data)
 
 ```{r}
 # define colors
-bins <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
-
-pal <- colorBin("Greens", domain = worldmap$percent_trust, bins = bins)
-
+pal <- colorQuantile(rev(viridis::viridis(10)),
+                      worldmap$percent_trust, n=10)
 labels <- paste("<p>", worldmap$NAME, "<p>",
                 "<p>", "%:", round(worldmap$percent_trust, digits = 2), "<p>",
                 sep = "")
-
 #leaflet map
 leaflet(worldmap, 
         options = leafletOptions(attributionControl = FALSE)) %>%
