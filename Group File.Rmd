@@ -178,7 +178,7 @@ world <- readOGR(dsn = here::here("TM_WORLD_BORDERS_SIMPL-0.3",
                                   "TM_WORLD_BORDERS_SIMPL-0.3.shp"))
 
 #merge spacial object with df
-worldmap <- merge(world, health_data)
+worldmap <- merge(world, trust_data)
 ```
 
 ```{r}
