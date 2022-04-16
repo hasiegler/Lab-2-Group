@@ -126,7 +126,6 @@ dictionary_clean_1 <- dictionary_clean %>%
   mutate(across(where(is.character), str_trim)) %>%
   rename("countries" = "c..United.States.....Egypt.....Morocco.....Lebanon.....Saudi.Arabia...") %>% 
   head(n = 144) # last entry was blank so I removed it
-
 ```
 
 ```{r, warning = FALSE}
@@ -145,7 +144,7 @@ health_data <- health_data %>%
   summarise(percent_trust = mean(Q22) * 100)
 
 #add country column to data set
-health_data <- add_column(health_data, dictionary_clean_1) 
+health_data <- add_column(health_data, dictionary_clean_1)
 
 health_data <- health_data %>% 
   rename("NAME" = 'countries')
@@ -166,7 +165,7 @@ world <- readOGR(
   dsn = here::here("TM_WORLD_BORDERS_SIMPL-0.3", "TM_WORLD_BORDERS_SIMPL-0.3.shp"))
 
 #merge spacial object with df
-merge(world, health_data)
+worldmap <- merge(world, health_data)
 ```
 
 ```{r}
@@ -194,6 +193,41 @@ leaflet(worldmap, options =
     "topright", pal = pal, values = ~percent_trust,
     title = htmltools::HTML("Trust in Health Care Clinics"),
     opacity = .8 )
+```
+```{r}
+# define colors
+bins <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+
+pal <- colorBin("Greens", domain = worldmap$percent_trust, bins = bins)
+
+
+
+labels <- paste("<p>", worldmap$NAME, "<p>",
+                "<p>", "%:", round(worldmap$percent_trust, digits = 2), "<p>",
+                sep = "")
+
+#leaflet map
+leaflet(worldmap, 
+        options = leafletOptions(attributionControl = FALSE)) %>%
+  addTiles() %>% 
+  setView(lat = 20, lng = 0, zoom = 1) %>%
+  addPolygons(label = lapply(labels, htmltools::HTML), 
+              labelOptions= labelOptions(direction = 'auto'), 
+              weight=1, 
+              color='white', 
+              opacity=1,
+              fillColor = ~pal(percent_trust), 
+              fillOpacity = 1,
+              highlightOptions = highlightOptions(
+                color='#000000', 
+                weight = 2,
+                bringToFront = TRUE, 
+                sendToBack = TRUE)) %>%
+  addLegend("topright", 
+            pal = pal, 
+            values = ~percent_trust, 
+            title = htmltools::HTML("Trust in Health Care Clinics"), 
+            opacity = .8 )
 ```
 
 __3__

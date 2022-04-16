@@ -97,4 +97,119 @@ vaccines_data %>%
 
 ```
 
+# Part Two: Broad Visualization Improvement
+
+## Second Data Visualization Improvement
+
+
+1. Select a data visualization in the report that you think could be improved. Be sure to cite both the page number and figure title. Do your best to tell the story of this graph in words. That is, what is this graph telling you? What do you think the authors meant to convey with it?
+
+The choropleth on page 65 of the report can be improved. This graph uses varying shades of the color green to represent the level of confidence that people in particular countries have in their countries' health clinics and hospitals. 
+
+2. List the variables that appear to be displayed in this visualization.
+The variables that appear to be displayed in the visualization are country and level of confidence on hospitals and health care clinics. 
+
+3. Now that you're versed in the grammar of graphics (ggplot), list the aesthetics used and which variables are specified for each.
+The fill aesthetic is the country and the percentage of confidence is also an aesthetic. The world map is a geometry.
+
+4. What type of graph would you call this?
+
+This is a choropleth.
+
+5. List all of the problems or things you would improve about this graph.  
+
+Green only is not an accessible color for red green color blind people. I would change the color to make it more accessible. I would also fix the label of the legend to make it more accurate. The legend could also be more descriptive
+
+
+6. Improve the visualization above by either re-creating it with the issues you identified fixed OR by creating a new visualization that you believe tells the same story better.
+
+```{r}
+#create a df with the names of the countries in the whack order that it came in
+dictionary_clean <- country_diction %>% 
+  select(`Variable Type & Codes*`) %>% 
+  head(n = 1) %>%  
+  pull()
+
+dictionary_clean <- dictionary_clean %>% 
+  str_replace_all("[:digit:]+=", "") %>% 
+  str_split(",") %>% 
+  as.data.frame() %>% 
+  mutate(across(where(is.character), str_trim)) %>%
+  rename("countries" = "c..United.States.....Egypt.....Morocco.....Lebanon.....Saudi.Arabia...") %>% 
+  head(n = 144) # last entry was blank so I removed it
+```
+
+```{r, warning = FALSE}
+#clean data
+trust_data <- country_data %>% 
+  group_by(WP5, Regions_Report) %>% 
+  filter(Q22 != 98:99) %>% 
+  select(WP5, Regions_Report, Q22) %>% 
+  mutate(Q22 = case_when(Q22 %in% 1:2 ~ 1, 
+                         TRUE ~ 0)) %>% 
+  drop_na()
+
+#calculate %
+trust_data <- trust_data %>% 
+  group_by(WP5) %>% 
+  summarise(percent_trust = mean(Q22) * 100)
+
+#add country column to data set
+trust_data <- add_column(trust_data, dictionary_clean)
+
+trust_data <- trust_data %>% 
+  rename("NAME" = 'countries')
+
+```
+
+The leaflet base map came from this website: https://r-graph-gallery.com/183-choropleth-map-with-leaflet.html
+
+I learned how to merge the data frame and the spacial object here
+https://gis.stackexchange.com/questions/259803/merge-spatial-and-non-spatial-data-and-create-spatialpolygonsdataframe-in-r
+
+The base code for the map came from here:
+https://slcladal.github.io/maps.html
+
+```{r}
+#read in spacial object
+world <- readOGR(dsn = here::here("TM_WORLD_BORDERS_SIMPL-0.3", 
+                                  "TM_WORLD_BORDERS_SIMPL-0.3.shp"))
+
+#merge spacial object with df
+worldmap <- merge(world, health_data)
+```
+
+```{r}
+# define colors
+bins <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+
+pal <- colorBin("Greens", domain = worldmap$percent_trust, bins = bins)
+
+labels <- paste("<p>", worldmap$NAME, "<p>",
+                "<p>", "%:", round(worldmap$percent_trust, digits = 2), "<p>",
+                sep = "")
+
+#leaflet map
+leaflet(worldmap, 
+        options = leafletOptions(attributionControl = FALSE)) %>%
+  addTiles() %>% 
+  setView(lat = 20, lng = 0, zoom = 1) %>%
+  addPolygons(label = lapply(labels, htmltools::HTML), 
+              labelOptions= labelOptions(direction = 'auto'), 
+              weight=1, 
+              color='white', 
+              opacity=1,
+              fillColor = ~pal(percent_trust), 
+              fillOpacity = 1,
+              highlightOptions = highlightOptions(
+                color='#000000', 
+                weight = 2,
+                bringToFront = TRUE, 
+                sendToBack = TRUE)) %>%
+  addLegend("topright", 
+            pal = pal, 
+            values = ~percent_trust, 
+            title = htmltools::HTML("Trust in Health Care Clinics"), 
+            opacity = .8 )
+```
 
