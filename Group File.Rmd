@@ -169,7 +169,7 @@ The leaflet base map came from this website: https://r-graph-gallery.com/183-cho
 Info on merging the data frame and the spacial object here:
 https://gis.stackexchange.com/questions/259803/merge-spatial-and-non-spatial-data-and-create-spatialpolygonsdataframe-in-r
 
-The base code for the map came from here:
+Some of the code for the leaflet map came from here:
 https://slcladal.github.io/maps.html
 
 ```{r}
